@@ -1,0 +1,25 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+typing_extensions = "*"
+pandas = "==2.3.2"
+psutil = "==7.0.0"
+pydaymet = "==0.19.4"
+anytree = "==2.13.0"
+fastparquet = "==2024.11.0"
+matplotlib = "==3.10.6"
+rasterio = "==1.4.3"
+pygris = "0.2.0"
+geopandas = "1.1.1"
+shapely = "2.1.1"
+rasterstats = "0.20.0"
+pysda = "0.1.6"
+
+[dev-packages]
+ipykernel = "*"
+
+[requires]
+python_version = "3.12"

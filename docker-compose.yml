@@ -1,0 +1,12 @@
+services:
+  apsimxpy_container:
+    image: apsimxpy
+    container_name: apsimxpy_container
+    volumes:
+      - .:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8888:8888" 
+    tty: true
+    stdin_open: true
+

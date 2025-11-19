@@ -18,11 +18,13 @@ class Chemical(ApsimModifier):
         # Find Solutes
         solutes = [child for child in soil["Children"] if child["$type"] == "Models.Soils.Solute, Models"]
         
+        ph=chem['PH']
         cec=chem['CEC']
         no3 = next(solute for solute in solutes if solute["Name"] == "NO3")
         nh4 = next(solute for solute in solutes if solute["Name"] == "NH4")
         urea = next(solute for solute in solutes if solute["Name"] == "Urea")
         # Pick Initial Values
+        self.__ph=ph
         self.__cec=cec
         self.__NO3InitialValues=no3['InitialValues']
         self.__NH4InitialValues=nh4['InitialValues']
@@ -51,13 +53,39 @@ class Chemical(ApsimModifier):
         self.chem = next(prop for prop in soil['Children'] if prop["$type"] == "Models.Soils.Chemical, Models")
         # Find Solutes
         self.solutes = [child for child in soil["Children"] if child["$type"] == "Models.Soils.Solute, Models"]
+        
+    def set_Thickness(self,new_list):
+        self._reload()
+        
+        
+        no3 = next(solute for solute in self.solutes if solute["Name"] == "NO3")
+        no3['Thickness']=new_list
+        
+        nh4 = next(solute for solute in self.solutes if solute["Name"] == "NH4")
+        nh4['Thickness']=new_list
+        
+        urea = next(solute for solute in self.solutes if solute["Name"] == "Urea")
+        urea['Thickness']=new_list
+        
+        
+        self.save_changes()
+        
+        self.__NO3Thickness=no3['Thickness']
+        self.__NH4Thickness=nh4['Thickness']
+        self.__UreaThickness=urea['Thickness']
+        
     
     def set_cec(self,new_list=None):
         self._reload()
-        cec=self.chem['CEC']
-        cec=new_list
+        self.chem['CEC']=new_list
         self.save_changes()
-        self.__cec=cec
+        self.__cec=self.chem['CEC']
+        
+    def set_ph(self,new_list=None):
+        self._reload()
+        self.chem['PH']=new_list
+        self.save_changes()
+        self.__ph=self.chem['PH']
     
     def set_no3_initial_values(self,values=None):
         self._reload()
@@ -66,12 +94,7 @@ class Chemical(ApsimModifier):
         self.save_changes()
         self.__NO3InitialValues=no3['InitialValues']
 
-    def set_no3_thickness(self,layers=None):
-        self._reload()
-        no3 = next(solute for solute in self.solutes if solute["Name"] == "NO3")
-        no3['Thickness']=layers
-        self.save_changes()
-        self.__NO3Thickness=no3['Thickness']
+        
             
     def set_nh4_initial_values(self,values=None):
         self._reload()
@@ -80,12 +103,7 @@ class Chemical(ApsimModifier):
         self.save_changes()
         self.__NH4InitialValues=nh4['InitialValues']
 
-    def set_nh4_thickness(self,layers=None):
-        self._reload()
-        nh4 = next(solute for solute in self.solutes if solute["Name"] == "NH4")
-        nh4['Thickness']=layers
-        self.save_changes()
-        self.__NH4Thickness=nh4['Thickness']
+        
     
     def set_urea_initial_values(self,values=None):
         self._reload()
@@ -95,12 +113,6 @@ class Chemical(ApsimModifier):
         self.__UreaInitialValues=urea['InitialValues']
 
         
-    def set_urea_thickness(self,layers=None):
-        self._reload()
-        urea = next(solute for solute in self.solutes if solute["Name"] == "Urea")
-        urea['Thickness']=layers
-        self.save_changes()
-        self.__UreaThickness=urea['Thickness']
         
     def get_no3(self):
         return self.__NO3InitialValues
@@ -110,3 +122,5 @@ class Chemical(ApsimModifier):
         return self.__UreaInitialValues
     def get_cec(self):
         return f'CEC:{self.__cec}'
+    def get_ph(self):
+        return f'pH:{self.__ph}'

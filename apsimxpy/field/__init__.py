@@ -2,6 +2,7 @@ import json
 from ..utils import ApsimModifier
 from .surfaceorganicmatter import SOM
 from .soil import Soil
+from .management import fertilize
 #########################################
 ############# Object: Field #############
 #########################################

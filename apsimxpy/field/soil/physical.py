@@ -43,6 +43,7 @@ class Physical(ApsimModifier):
         self.physical['Thickness']=new_list
         self.save_changes()
         self.__Thickness=self.physical['Thickness']
+        
 
     def set_ParticleSizeSand(self,new_list):
         self._reload()
@@ -113,7 +114,7 @@ class Physical(ApsimModifier):
     
     # Getters
     def get_Thickness(self):
-        return f'Depth (mm): {self.__Thickness}'
+        return self.__Thickness
     def get_ParticleSizeSand(self):
         return f'Sand (%): {self.__ParticleSizeSand}'
     def get_ParticleSizeSilt(self):
@@ -129,10 +130,61 @@ class Physical(ApsimModifier):
     def get_AirDry(self):
         return f'AirDry(mm/mm): {self.__AirDry}'
     def get_LL15(self):
-        return f'LL15(mm/mm): {self.__LL15}'
+        return self.__LL15
     def get_DUL(self):
         return f'DUL(mm/mm): {self.__DUL}'
     def get_SAT(self):
         return f'SAT(mm/mm): {self.__SAT}'
     def get_KS(self):
-        return f'KS(mm/day): {self.__KS}'
+        return self.__KS
+    
+class PhysicalCrop(ApsimModifier):
+    def __init__(self,init_obj=None):
+        self.apsim_file_input=init_obj.apsim_file_input
+        apsim_file=open(f"/workspace/{self.apsim_file_input}.apsimx","r")
+        apsim_json = apsim_file.read()
+        self.modifier=json.loads(apsim_json)
+        children = self.modifier["Children"][0]["Children"]
+        zones = next(child for child in children if child["$type"] == "Models.Core.Zone, Models")
+        soil = next(zone for zone in zones['Children'] if zone["$type"] == "Models.Soils.Soil, Models")
+        self.physical = next(prop for prop in soil['Children'] if prop["$type"] == "Models.Soils.Physical, Models")
+    def _reload(self):
+        apsim_file=open(f"/workspace/{self.apsim_file_input}.apsimx","r")
+        apsim_json = apsim_file.read()
+        self.modifier=json.loads(apsim_json)
+        children = self.modifier["Children"][0]["Children"]
+        zones = next(child for child in children if child["$type"] == "Models.Core.Zone, Models")
+        soil = next(zone for zone in zones['Children'] if zone["$type"] == "Models.Soils.Soil, Models")
+        self.physical = next(prop for prop in soil['Children'] if prop["$type"] == "Models.Soils.Physical, Models")
+        
+    def save_changes(self):
+        with open(f"/workspace/{self.apsim_file_input}.apsimx", "w") as f:
+            json.dump(self.modifier, f, indent=4)  
+            
+    def set_ll(self,new_list):
+        self._reload()
+        for crop in self.physical["Children"]:
+            if crop["$type"] == "Models.Soils.SoilCrop, Models":
+                # Reemplazar valores
+                crop["LL"] = new_list
+                crop["LLMetadata"] = [None] * len(new_list)
+        self.save_changes()
+    
+    def set_kl(self,new_list):
+        self._reload()
+        for crop in self.physical["Children"]:
+            if crop["$type"] == "Models.Soils.SoilCrop, Models":
+                # Reemplazar valores
+                crop["KL"] = new_list
+                crop["KLMetadata"] = [None] * len(new_list)
+        self.save_changes()
+                
+    def set_xf(self,new_list):
+        self._reload()
+        for crop in self.physical["Children"]:
+            if crop["$type"] == "Models.Soils.SoilCrop, Models":
+                # Reemplazar valores
+                crop["XF"] = new_list
+                crop["XFMetadata"] = [None] * len(new_list)
+                
+        self.save_changes()

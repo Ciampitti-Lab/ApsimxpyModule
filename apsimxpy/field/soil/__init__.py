@@ -6,7 +6,7 @@ import shapely
 import contextlib
 from .ssurgo import sdapoly, sdaprop, sdainterp
 from .chemical import Chemical
-from .physical import Physical
+from .physical import Physical, PhysicalCrop
 from .soil_water import SoilWater
 from .water import Water
 from .organic import Organic
@@ -55,136 +55,184 @@ class Soil(ApsimModifier):
     def save_changes(self):
             with open(f"/workspace/{self.apsim_file_input}.apsimx", "w") as f:
                 json.dump(self.modifier, f, indent=4)  
-        
-# Setters 
-    def set_Soil(self,latlon): # Latlong is a tuple
-        
-        self._reload()
-        
-        longitude = latlon[1]
-        latitude = latlon[0]
-
-        point_geom = shapely.Point(longitude, latitude)
-
-
-
-        gdf = gpd.GeoDataFrame({'name': ['MyPoint']},
-                            geometry=[shapely.Point(longitude, latitude)],
-                            crs="EPSG:4326")
-
-        gdf_utm = gdf.to_crs(epsg=32616) 
-
-
-        poly_geom = gdf_utm.geometry[0].buffer(1) 
-
-        gdf_buffer = gpd.GeoDataFrame({'name': ['MyPoint']}, geometry=[poly_geom], crs=gdf_utm.crs)
-
-        with contextlib.redirect_stdout(None):
-            myaoi = sdapoly.gdf(gdf_buffer)
-
-            apsim_props = [
-                'sandtotal_r', 'silttotal_r', 'claytotal_r',  # Sand, Silt, Clay
-                'om_r',                                        # Carbon
-                'dbovendry_r',  # BD
-                'wtenthbar_r', 'wthirdbar_r', 'wfifteenbar_r', 'wsatiated_r', # AirDry , DUL, LL15, SAT
-                'ksat_r',                                      # SWCON
-                'cec7_r' # CEC
-            ]
-
-            soil_df=pd.DataFrame()
-
-            for j,i in enumerate(apsim_props) :
-                if j==0:
-                    try:
-                        wtdavg=sdaprop.getprop(df=myaoi,column='mukey',method='wtd_avg',prop=i,minmax=None,prnt=False,meta=False)
-                        print(wtdavg)
-                        soil_df['mukey']=wtdavg['mukey']
-                        soil_df['musym']=wtdavg['musym']
-                        soil_df['hzdept_r']=wtdavg['hzdept_r']
-                        soil_df['hzdepb_r']=wtdavg['hzdepb_r']
-                        soil_df[i]=wtdavg[i]
-                    except:
-                        wtdavg=sdaprop.getprop(df=myaoi,column='mukey',method='minmax',prop=i,minmax='max',prnt=False,meta=False)
-                        soil_df['mukey']=wtdavg['mukey']
-                        soil_df['musym']=wtdavg['musym']
-                        soil_df['hzdept_r']=wtdavg['hzdept_r']
-                        soil_df['hzdepb_r']=wtdavg['hzdepb_r']
-                        soil_df[i]=wtdavg[i]
-                else:
-                    try:
-                        wtdavg=sdaprop.getprop(df=myaoi,column='mukey',method='wtd_avg',prop=i,minmax=None,prnt=False,meta=False)
-                        soil_df[i]=wtdavg[i]
-                    except:
-                        wtdavg=sdaprop.getprop(df=myaoi,column='mukey',method='minmax',prop=i,minmax='max',prnt=False,meta=False)
-                        soil_df[i]=wtdavg[i]
-
-        soil_df['thickness']=soil_df['hzdept_r'].astype(str)+'-'+soil_df['hzdepb_r'].astype(str)
-        soil_df=soil_df[['sandtotal_r','silttotal_r','claytotal_r','om_r','dbovendry_r','wtenthbar_r','wthirdbar_r','wfifteenbar_r','wsatiated_r','ksat_r','cec7_r','thickness','hzdepb_r']]
-        soil_df.columns=['Sand','Silt','Clay','Carbon','BD','AirDry','DUL','LL15','SAT','SWCON','CEC','thickness','hzdepb_r']
-
-        # Percentaje --> Decimal
-        soil_df['DUL']=[round(float(d)/100,3) for d in soil_df['DUL']]
-        soil_df['LL15']=[round(float(l)/100,3) for l in soil_df['LL15']]
-        soil_df['SAT']=[round(float(s)/100,3) for s in soil_df['SAT']]
-        # Fix Saturation-Porosity
-        poro=[1-float(bd)/2.65 - 0.001 for bd in soil_df['BD']]
-        soil_df['SAT']=np.where(np.array(poro) < soil_df['SAT'], poro, soil_df['SAT'])
-        soil_df['DUL']=np.where(np.array(soil_df['SAT']) < soil_df['DUL'], soil_df['SAT'], soil_df['DUL'])
-        soil_df['LL15']=np.where(np.array(soil_df['DUL']) < soil_df['LL15'], soil_df['DUL'], soil_df['LL15'])
-        # Calculating AirDry
-        soil_df['AirDry']=[l*0.5 for l in soil_df['LL15']] 
-        # SoilCNRatio
-        soil_df['SoilCNRatio']=['12']*soil_df.shape[0]
-        # WaterInitialValues
-        soil_df['WaterInitialValues']=soil_df['LL15']
     
+
+    def __soil_variable_profile(self, nlayers, a=0.5, b=0.5):
+        """
+        Generate a soil profile based on the Ricker function or exponential decay.
+        """
+        if a < 0:
+            raise ValueError("a parameter cannot be negative")
         
+        layers = np.arange(1, nlayers + 1)  # 1:nlayers
+        
+        if a > 0 and b != 0:
+            tmp = a * layers * np.exp(-b * layers)
+            ans = tmp / tmp.max()
+            
+        elif a == 0 and b != 0:
+            ans = np.exp(-b * layers) / np.exp(-b)
+            
+        elif a == 0 and b == 0:
+            ans = np.ones(nlayers)
+        
+        return ans
+
+# Setters 
+    def set_soil_saxton(self,soil_saxton):
         soil_phy=Physical(self.init_obj)
+        soil_phy_crop=PhysicalCrop(self.init_obj)
         soil_org=Organic(self.init_obj)
         soil_che=Chemical(self.init_obj)
         soil_wat=Water(self.init_obj)
-        soil_phy.set_ParticleSizeSand(list(soil_df['Sand']))
-        soil_phy.set_ParticleSizeSilt(list(soil_df['Silt']))
-        soil_phy.set_ParticleSizeClay(list(soil_df['Clay']))
-        soil_phy.set_AirDry(list(soil_df['AirDry']))
-        soil_org.set_Carbon(list(soil_df['Carbon']))
-        soil_phy.set_BD(list(soil_df['BD']))
-        soil_phy.set_AirDry(list(soil_df['AirDry']))
-        soil_phy.set_DUL(list(soil_df['DUL']))
-        soil_phy.set_LL15(list(soil_df['LL15']))
-        soil_phy.set_SAT(list(soil_df['SAT']))
-        soil_che.set_cec(list(soil_df['CEC']))
-        soil_org.set_SoilCNRatio(list(soil_df['SoilCNRatio']))
-        soil_wat.set_InitialValues(list(soil_df['WaterInitialValues']))
-        # SWCON ?
-        # pH?
+        SW_soil_wat=SoilWater(self.init_obj)
+        ###################### THICKNESS ############################################################################
+        soil_phy.set_Thickness(list(soil_saxton['THICK']))
+        soil_che.set_Thickness(list(soil_saxton['THICK']))
         
-        self.set_Thickness(list(soil_df['hzdepb_r']))
+        thickness = soil_phy.get_Thickness()
         
-        print('Soil established successfully')
-
-        
-        
-        
-    # I need to change this using the already created objects
-    def set_Thickness(self,new_list):
         self._reload()
-        # Physical, Water Balance, Water and Organic
-        physical = next(prop for prop in self.Soil['Children'] if prop["$type"] == "Models.Soils.Physical, Models")
         waterb = next(prop for prop in self.Soil['Children'] if prop["$type"] == "Models.WaterModel.WaterBalance, Models")
         water = next(prop for prop in self.Soil['Children'] if prop["$type"] == "Models.Soils.Water, Models")
         organ = next(prop for prop in self.Soil['Children'] if prop["$type"] == "Models.Soils.Organic, Models")
+        chemical = next(prop for prop in self.Soil['Children'] if prop["$type"] == "Models.Soils.Chemical, Models")
         
-        # Chemical
-        solutes = [child for child in self.Soil["Children"] if child["$type"] == "Models.Soils.Solute, Models"]
-        no3 = next(solute for solute in solutes if solute["Name"] == "NO3")
-        nh4 = next(solute for solute in solutes if solute["Name"] == "NH4")
-        urea = next(solute for solute in solutes if solute["Name"] == "Urea")
+        organ['Thickness']=water['Thickness']=waterb['Thickness']=chemical['Thickness']=thickness
+        self.save_changes()  
+        #############################################################################################################
+        soil_phy.set_ParticleSizeSand(list(soil_saxton['SAND']))
+        soil_phy.set_ParticleSizeClay(list(soil_saxton['CLAY']))
+        soil_phy.set_ParticleSizeSilt(list(soil_saxton['SILT']))
+        soil_phy.set_BD(list(soil_saxton['BD']))
+        soil_phy.set_AirDry(list(soil_saxton['AirDry']))
+        soil_phy.set_DUL(list(soil_saxton['DUL']))
+        soil_phy.set_LL15(list(soil_saxton['LL']))
+        soil_phy.set_SAT(list(soil_saxton['SAT']))
+        soil_org.set_Carbon(list(soil_saxton['CO']))
+        soil_che.set_cec(list(soil_saxton['CO']))
+        soil_org.set_SoilCNRatio(list(soil_saxton['SoilCN']))
+        soil_org.set_FBiom(list(soil_saxton['FBiom']))
+        soil_org.set_FInert(list(soil_saxton['FIner']))
+        soil_che.set_ph(list(soil_saxton['PH']))
+        soil_che.set_nh4_initial_values(list(soil_saxton['PH']))
+        soil_che.set_no3_initial_values(list(soil_saxton['no3kgha']))
+        soil_che.set_urea_initial_values([0.0 for _ in soil_phy.get_Thickness()])
+        soil_phy_crop.set_kl(list(soil_saxton['KL_maize']))
+        soil_phy_crop.set_ll(list(soil_saxton['LL']))
+        soil_phy_crop.set_xf(list(soil_saxton['XF_maize']))    
+        SW_soil_wat.set_SWCON(list(soil_saxton['SWCON']))   
+        soil_phy.set_KS(list(soil_saxton['KSAT'])) 
+        soil_org.set_FOM([round(x, 4) for x in 40 * self.__soil_variable_profile(len(thickness),a=0,b=0)])   
+        soil_wat.set_InitialValues(list(soil_saxton['SAT']))
         
-        urea['Thickness']=no3['Thickness']=nh4['Thickness']=organ['Thickness']=water['Thickness']=waterb['Thickness']=physical['Thickness']=new_list
-        print('New depht/tickness established successful')
+    def set_Soil_Fmiguez(self,soil_df):
+        ###################### CHECKING ############################################################################
+        cond_texture = ((soil_df["Sand"] == 0) & (soil_df["Silt"] == 0) & (soil_df["Clay"] == 0)| (soil_df[["Sand", "Silt", "Clay"]].isna().all(axis=1)))
+        cond_texture_correct = ~cond_texture
+
+        
+        if cond_texture.any()==True:
+            if cond_texture_correct.any()==True:
+                soil_df.loc[cond_texture, ["Sand", "Silt", "Clay"]] = soil_df.loc[cond_texture_correct, ["Sand", "Silt", "Clay"]].iloc[0].tolist()
+            else:
+                print('No texture :( ')
+                soil_df.loc[cond_texture, ["Sand", "Silt", "Clay"]] = [60,15,25]
+            
+        
+        cond_phy=((soil_df['AirDry'].isna())|(soil_df['LL15'].isna())|(soil_df['DUL'].isna())|(soil_df['SAT'].isna())|(soil_df['BD'].isna()))
+        cond_phy_correct = ~cond_phy
+        
+        
+        if cond_phy.any()==True:
+            if cond_phy_correct.any()==True:
+                soil_df.loc[cond_phy, ["AirDry", "LL15", "DUL","SAT","BD","WaterInitialValues"]]=soil_df.loc[cond_phy_correct, ["AirDry", "LL15", "DUL","SAT","BD","WaterInitialValues"]].iloc[0].tolist()
+            else:
+                print('No Soil Values :(')
+                soil_df.loc[cond_phy, ["AirDry", "LL15", "DUL","SAT","BD","WaterInitialValues"]] = [float(0.1 * self.__soil_variable_profile(1,a=0,b=0.2)),
+                                                                        float(0.15 * self.__soil_variable_profile(1,a=0,b=0.2)),
+                                                                        float(0.25 * self.__soil_variable_profile(1,a=0,b=0.2)),
+                                                                        float(0.45 * self.__soil_variable_profile(1,a=0,b=0.2)),
+                                                                        float(1.1 * self.__soil_variable_profile(1,a=0,b=-0.05)),
+                                                                        float(0.15 * self.__soil_variable_profile(1,a=0,b=0.2))]    
+        print(soil_df)
+        ###################### THICKNESS ############################################################################
+        soil_phy=Physical(self.init_obj)
+        soil_phy_crop=PhysicalCrop(self.init_obj)
+        soil_org=Organic(self.init_obj)
+        soil_che=Chemical(self.init_obj)
+        soil_wat=Water(self.init_obj)
+        SW_soil_wat=SoilWater(self.init_obj)
+        
+        # print(soil_df['Sand'])
+        soil_phy.set_Thickness(list(soil_df['hzdepb_r']))
+        soil_che.set_Thickness(list(soil_df['hzdepb_r']))
+        
+        thickness = soil_phy.get_Thickness()
+        
+        self._reload()
+        waterb = next(prop for prop in self.Soil['Children'] if prop["$type"] == "Models.WaterModel.WaterBalance, Models")
+        water = next(prop for prop in self.Soil['Children'] if prop["$type"] == "Models.Soils.Water, Models")
+        organ = next(prop for prop in self.Soil['Children'] if prop["$type"] == "Models.Soils.Organic, Models")
+        chemical = next(prop for prop in self.Soil['Children'] if prop["$type"] == "Models.Soils.Chemical, Models")
+        
+        organ['Thickness']=water['Thickness']=waterb['Thickness']=chemical['Thickness']=thickness
         self.save_changes()
+        ###############################################################################################################
         
+        soil_phy.set_ParticleSizeSand(list(soil_df['Sand']))
+        soil_phy.set_ParticleSizeSilt(list(soil_df['Silt']))
+        soil_phy.set_ParticleSizeClay(list(soil_df['Clay']))
+        soil_phy.set_BD(list(soil_df['BD']))
+        soil_phy.set_SAT(list(soil_df['SAT']))
+        soil_phy.set_DUL(list(soil_df['DUL']))
+        soil_phy.set_LL15(list(soil_df['LL15']))
+        soil_phy.set_AirDry(list(soil_df['AirDry']))
+        
+        
+        soil_org.set_Carbon(list(soil_df['Carbon']))
+        soil_che.set_cec(list(soil_df['CEC']))
+        soil_org.set_SoilCNRatio(list(soil_df['SoilCNRatio']))
+        soil_wat.set_InitialValues(list(soil_df['WaterInitialValues']))
+        
+        # FInert FBiom NH4 NO3 KS PH FOM
+        
+        
+        PH_list=[round(x, 4) for x in 6.5 * self.__soil_variable_profile(len(thickness),a=0,b=0)]
+        FOM_list=[round(x, 4) for x in 40 * self.__soil_variable_profile(len(thickness),a=0,b=0)]
+        FBiom_list=[round(x, 4) for x in 0.04 * self.__soil_variable_profile(len(thickness),a=0,b=0.2)]
+        FInert_list=[round(x, 4) for x in 0.8 * self.__soil_variable_profile(len(thickness),a=0,b=-0.01)]
+        nh4_list = [300.0 for _ in soil_phy.get_Thickness()]
+        no3_list = [300.0 for _ in soil_phy.get_Thickness()]
+        ks_list = [round(x, 4) for x in 100 * self.__soil_variable_profile(len(thickness),a=0,b=0.2)]
+        swcon_list=[0.3]*len(thickness)
+        
+        # Crop         
+        ll_list = soil_phy.get_LL15()
+        kl_list = [round(x, 4) for x in 0.06 * self.__soil_variable_profile(len(thickness),a=0,b=0.2)]
+        xf_list = [round(x, 4) for x in 1 * self.__soil_variable_profile(len(thickness),a=0,b=0)]
+        
+        urea_list = [0.0 for _ in soil_phy.get_Thickness()]
+        
+        
+        soil_phy.set_KS(ks_list)
+        soil_org.set_FOM(FOM_list)
+        soil_org.set_FBiom(FBiom_list)
+        soil_org.set_FInert(FInert_list)
+        soil_che.set_ph(PH_list)
+        soil_che.set_nh4_initial_values(nh4_list)
+        soil_che.set_no3_initial_values(no3_list)
+        soil_che.set_urea_initial_values(urea_list)
+        soil_phy_crop.set_kl(kl_list)
+        soil_phy_crop.set_ll(ll_list)
+        soil_phy_crop.set_xf(xf_list)
+        # Rocks -- Null
+        # SWCON Values from the MaizeSoybean apsim file       
+        SW_soil_wat.set_SWCON(swcon_list)
+        print('Soil established successfully')
+
+        
+
         
     def set_RecordNumber(self, new_value):
         self._reload()
@@ -340,6 +388,6 @@ class Soil(ApsimModifier):
     def get_Thickness(self):
         physical = next(prop for prop in self.Soil['Children'] if prop["$type"] == "Models.Soils.Physical, Models")
         thickness=physical['Thickness']
-        return f'Thickness: {thickness}'
+        return thickness
     
     

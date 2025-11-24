@@ -137,7 +137,12 @@ def soil_apsim(soil_props_surgo):
     CEC = soil_props_surgo['cec7_r']
     
     # THICK
-    THICK = [x*10 for x in soil_props_surgo['hzdepb_r']]
+    HORIZON_LONG=[x*10 for x in soil_props_surgo['hzdepb_r']]
+    
+    if len(HORIZON_LONG) == 0:
+        THICK = pd.Series([])
+    else:
+        THICK = pd.Series(HORIZON_LONG).diff().fillna(HORIZON_LONG[0])
     
     apsim_soil=pd.DataFrame(
         {'SAND':SAND,

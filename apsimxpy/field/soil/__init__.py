@@ -124,7 +124,7 @@ class Soil(ApsimModifier):
         SW_soil_wat.set_SWCON(list(soil_saxton['SWCON']))   
         soil_phy.set_KS(list(soil_saxton['KSAT'])) 
         soil_org.set_FOM([round(x, 4) for x in 40 * self.__soil_variable_profile(len(thickness),a=0,b=0)])   
-        soil_wat.set_InitialValues(list(soil_saxton['SAT']))
+        soil_wat.set_InitialValues(list(soil_saxton['DUL']))
         
     def set_Soil_Fmiguez(self,soil_df):
         ###################### CHECKING ############################################################################

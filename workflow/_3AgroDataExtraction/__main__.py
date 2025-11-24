@@ -42,6 +42,7 @@ for idx, row in fields.iterrows():
     s_apsim=sa.soil_apsim(props)
     s_apsim['id_cell']=row['id_cell']
     s_apsim['id_within_cell']=row['id_within_cell']
+    print(s_apsim)
     soils = pd.concat([soils, s_apsim], ignore_index=True)
     # Extraction of weather variables
     lat = row['lat']
@@ -50,5 +51,5 @@ for idx, row in fields.iterrows():
     met.get_weather((round(long,7), round(lat,7)), clock1, filename)
     print(f'Weather and Soil Variables extracted for field {row['id_cell']}-{row['id_within_cell']}')
 
-soils.to_csv("/workspace/soil/soils.csv")
+soils.to_csv("/workspace/soil/soils.csv",index_label=False)
 print('Variables extracted successful!!! step 3/4')

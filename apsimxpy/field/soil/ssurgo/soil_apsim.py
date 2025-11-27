@@ -26,12 +26,23 @@ def soil_apsim(soil_props_surgo):
     
     # DUL
     DUL_sax=saxton['DUL']
-    DUL = [dul/100 for dul in soil_props_surgo['wthirdbar_r']]
+    
+    DUL = np.array([dul/100 if not np.isnan(dul) else np.nan for dul in soil_props_surgo['wthirdbar_r']])
+
+    DUL = np.where(np.isnan(DUL), DUL_sax, DUL)
+    
     DUL=np.minimum(DUL, DUL_sax)
+    
     DUL = np.minimum(DUL, SAT)
     
     # LL
-    LL = [ll/100 for ll in soil_props_surgo['wfifteenbar_r']]
+    LL_sax=saxton['LL15']
+    
+    LL = np.array([ll/100 if not np.isnan(ll) else np.nan for ll in soil_props_surgo['wfifteenbar_r']])
+    
+    LL = np.where(np.isnan(LL), LL_sax, LL)
+    
+    LL=np.minimum(LL,DUL)
     
     #AirDry
     AirDry = [  0.9*l if c < 15 else

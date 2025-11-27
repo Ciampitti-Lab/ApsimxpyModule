@@ -38,6 +38,14 @@ for idx, row in fields.iterrows():
     # Extraction of soil variables
     ssurgo_soil=se.get_poly_soil(row)
     main_soil=se.get_main_soil(ssurgo_soil)
+    
+    row_soil = ssurgo_soil[ssurgo_soil['mukey'] == main_soil]
+    muname = row_soil['muname'].iloc[0].lower()
+    
+    if muname.startswith(("borrow", "urban", "water")):
+        print("⚠ No valid Area:", row_soil['muname'])
+        continue
+
     props=se.get_soil_props(ssurgo_soil,main_soil)
     s_apsim=sa.soil_apsim(props)
     s_apsim['id_cell']=row['id_cell']

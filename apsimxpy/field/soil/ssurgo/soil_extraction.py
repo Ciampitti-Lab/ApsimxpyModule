@@ -6,6 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from shapely import wkt
+import numpy as np
 
 def get_poly_soil(polygon, plot=False)-> pd.DataFrame:
     # Wraping the polygon in a MultiPolygon
@@ -126,4 +127,13 @@ def get_soil_props(soils,mukey_soil)-> pd.DataFrame:
     soil_props_ssurgo['cec7_r']=soil_props_ssurgo['cec7_r'].astype(float)
     soil_props_ssurgo['hzdept_r']=soil_props_ssurgo['hzdept_r'].astype(float)
     soil_props_ssurgo['hzdepb_r']=soil_props_ssurgo['hzdepb_r'].astype(float)
+    
+    # Fixing Missing values
+    texture_cols = ['sandtotal_r', 'silttotal_r', 'claytotal_r']
+    non_null_counts = soil_props_ssurgo[texture_cols].notna().sum(axis=1)
+    soil_props_ssurgo.loc[non_null_counts == 1, texture_cols] = np.nan
+    
+    soil_props_ssurgo[texture_cols] = soil_props_ssurgo[texture_cols].ffill().bfill() # texture Missing Values
+    soil_props_ssurgo['dbovendry_r'] = soil_props_ssurgo['dbovendry_r'].ffill().bfill() # BD Missing Values
+    
     return soil_props_ssurgo

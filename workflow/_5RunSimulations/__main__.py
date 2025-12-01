@@ -10,13 +10,13 @@ folder = "/workspace/workflow/_3AgroDataExtraction"
 geojson_file = glob.glob(os.path.join(folder, "*.geojson"))
 fields=gpd.read_file(geojson_file[0])
 
-nitrogen=[0,70,140,210,280]
+nitrogen=[0,100,200,300]
 
 for id,row in fields.iterrows():
     if row['id_within_cell']%2==0:
-        shutil.copy(f"/workspace/workflow/_5RunSimulations/field_{row['id_cell']}_{row['id_within_cell']}/SoybeanCorn_{row['id_cell']}_{row['id_within_cell']}.apsimx",f"/workspace/SoybeanCorn.apsimx")
+        shutil.copy(f"/workspace/workflow/_5RunSimulations/field_{row['id_cell']}_{row['id_within_cell']}/CornSoybean_{row['id_cell']}_{row['id_within_cell']}.apsimx",f"/workspace/CornSoybean.apsimx")
         
-        init_obg=apsimxpy.Initialize(apsim_folder_input='/Users/jorgeandresjolahernandez/Desktop/ApsimxpyModule',apsim_file_input='SoybeanCorn')
+        init_obg=apsimxpy.Initialize(apsim_folder_input='/Users/jorgeandresjolahernandez/Desktop/ApsimxpyModule',apsim_file_input='CornSoybean')
         
         fert=apsimxpy.field.management.Fertilize(init_obg)
         sim1=apsimxpy.simulator(init_obj=init_obg)
@@ -24,7 +24,7 @@ for id,row in fields.iterrows():
         clock1=apsimxpy.Clock(init_obj=init_obg)
         
         clock1.set_StartDate((1,1,2006)) 
-        clock1.set_EndDate((31,12,2023))
+        clock1.set_EndDate((31,12,2022))
         
         for n_rate in nitrogen:
             fert.set_fert_sowing(n_rate)
@@ -45,7 +45,7 @@ for id,row in fields.iterrows():
         
         clock1=apsimxpy.Clock(init_obj=init_obg)
         
-        clock1.set_StartDate((1,1,2006)) 
+        clock1.set_StartDate((1,1,2007)) 
         clock1.set_EndDate((31,12,2023))
         
         for n_rate in nitrogen:

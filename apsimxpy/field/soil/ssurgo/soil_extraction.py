@@ -128,6 +128,13 @@ def get_soil_props(soils,mukey_soil)-> pd.DataFrame:
     soil_props_ssurgo['hzdept_r']=soil_props_ssurgo['hzdept_r'].astype(float)
     soil_props_ssurgo['hzdepb_r']=soil_props_ssurgo['hzdepb_r'].astype(float)
     
+    # Fixing values in 0
+    cols_to_check = ['sandtotal_r', 'silttotal_r', 'claytotal_r', 'dbovendry_r']
+
+    soil_props_ssurgo.loc[:, cols_to_check] = (
+        soil_props_ssurgo.loc[:, cols_to_check]
+        .replace(0, np.nan)
+    )
     # Fixing Missing values
     texture_cols = ['sandtotal_r', 'silttotal_r', 'claytotal_r']
     non_null_counts = soil_props_ssurgo[texture_cols].notna().sum(axis=1)
@@ -135,5 +142,6 @@ def get_soil_props(soils,mukey_soil)-> pd.DataFrame:
     
     soil_props_ssurgo[texture_cols] = soil_props_ssurgo[texture_cols].ffill().bfill() # texture Missing Values
     soil_props_ssurgo['dbovendry_r'] = soil_props_ssurgo['dbovendry_r'].ffill().bfill() # BD Missing Values
-    
+    soil_props_ssurgo['om_r'] = soil_props_ssurgo['om_r'].ffill().bfill() # OM Missing Values
+
     return soil_props_ssurgo

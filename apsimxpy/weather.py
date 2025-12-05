@@ -46,7 +46,7 @@ class Weather(ApsimModifier):
         # Reorder columns
         dmet = dmet[["year", "day", "radn", "maxt", "mint", "rain", "vp", "swe"]]
         #W/m² to MJ/m²/day
-        dmet['radn']=dmet['radn']*0.0864
+        dmet['radn']=dmet["radn"] * 0.0864
         # TAV
         tav = dmet[["maxt", "mint"]].mean().mean()
         # AMP

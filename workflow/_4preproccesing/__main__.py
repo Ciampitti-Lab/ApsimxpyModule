@@ -20,12 +20,12 @@ count=0
 for id,row in fields.iterrows():
     if row['id_within_cell']%2==0:
         
-        init_obg=apsimxpy.Initialize(apsim_folder_input='/Users/jorgeandresjolahernandez/Desktop/ApsimxpyModule',apsim_file_input='SoybeanCorn')
+        init_obg=apsimxpy.Initialize(apsim_folder_input='/Users/jorgeandresjolahernandez/Desktop/ApsimxpyModule',apsim_file_input='CornSoybean')
 
         clock1=apsimxpy.Clock(init_obj=init_obg)
 
-        clock1.set_StartDate((1,1,2021)) 
-        clock1.set_EndDate((31,12,2024))
+        clock1.set_StartDate((1,1,2006)) 
+        clock1.set_EndDate((31,12,2022))
         
         met=apsimxpy.Weather(init_obg)
         soil1=apsimxpy.field.Soil(init_obg)
@@ -39,7 +39,7 @@ for id,row in fields.iterrows():
         soil=soils[(soils['id_cell']==row['id_cell']) & (soils['id_within_cell']==row['id_within_cell'])]
         soil1.set_soil_saxton(soil)
         # Saving file in folder
-        shutil.copy("/workspace/SoybeanCorn.apsimx",f"/workspace/workflow/_5RunSimulations/field_{row['id_cell']}_{row['id_within_cell']}/SoybeanCorn_{row['id_cell']}_{row['id_within_cell']}.apsimx")
+        shutil.copy("/workspace/CornSoybean.apsimx",f"/workspace/workflow/_5RunSimulations/field_{row['id_cell']}_{row['id_within_cell']}/CornSoybean_{row['id_cell']}_{row['id_within_cell']}.apsimx")
         # Counting simulations
         count+=1
     else:
@@ -47,8 +47,8 @@ for id,row in fields.iterrows():
 
         clock1=apsimxpy.Clock(init_obj=init_obg)
 
-        clock1.set_StartDate((1,1,2021)) 
-        clock1.set_EndDate((31,12,2024))
+        clock1.set_StartDate((1,1,2007)) 
+        clock1.set_EndDate((31,12,2023))
         
         met=apsimxpy.Weather(init_obg)
         soil1=apsimxpy.field.Soil(init_obg)

@@ -8,15 +8,18 @@ import math
 # Getting available soils in a polygon from SSURGO
 def soil_apsim(soil_props_surgo):
     saxton=sax.saxton_rawls(soil_props_surgo)
+
     # Sand, Clay, Silt
     SAND=soil_props_surgo['sandtotal_r']
     CLAY=soil_props_surgo['claytotal_r']
     SILT=soil_props_surgo['silttotal_r']
+
     # Bulk Density
     BD = np.where(soil_props_surgo['dbovendry_r'] < 0.9, 0.9, np.where(soil_props_surgo['dbovendry_r'] > 1.8, 1.8, soil_props_surgo['dbovendry_r']))
 
     # KSAT
     KSAT= np.minimum(soil_props_surgo['ksat_r'] * 100 / 1.157, saxton['KSAT']*2)
+    
     
     
     # SAT
@@ -119,6 +122,7 @@ def soil_apsim(soil_props_surgo):
     for i in range(1, len(soil_props_surgo)):
         if center_array[i] >= 100 and OC_array[i] == OC_array[i-1]:
             OC_array[i] = OC_array[0] * np.exp(-0.035 * center_array[i])
+            
     CO = OC_array   
     CO[CO == 0] = 0.001 
     

@@ -18,15 +18,16 @@ def saxton_rawls(soil_props_ssurgo)-> pd.DataFrame:
     OM=soil_props_ssurgo['om_r']
     Thickness=soil_props_ssurgo['thickness']
     
-    
     pSand = Sand/100
     pClay = Clay/100
     pOM = OM/100
+    
     
     # calc LL15 (theta_1500)
     theta_1500t = -0.024*pSand + 0.487*pClay + 0.006*pOM + 0.005*pSand*pOM - 0.013*pClay*pOM + 0.068*pSand*pClay + 0.031
     LL15 = theta_1500t + (0.14*theta_1500t - 0.02)
     LL15 = np.round(np.clip(LL15, 0.01, 0.99), 3)
+    
     
     # calc DUL (theta_33)
     theta_33t = -0.251*pSand + 0.195*pClay + 0.011*pOM +0.006*pSand*pOM - 0.027*pClay*pOM + 0.452*pSand*pClay + 0.299

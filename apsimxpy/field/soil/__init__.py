@@ -115,7 +115,7 @@ class Soil(ApsimModifier):
         soil_org.set_FBiom(list(soil_saxton['FBiom']))
         soil_org.set_FInert(list(soil_saxton['FIner']))
         soil_che.set_ph(list(soil_saxton['PH']))
-        soil_che.set_nh4_initial_values(list(soil_saxton['PH']))
+        soil_che.set_nh4_initial_values(list(soil_saxton['nh4kgha']))
         soil_che.set_no3_initial_values(list(soil_saxton['no3kgha']))
         soil_che.set_urea_initial_values([0.0 for _ in soil_phy.get_Thickness()])
         soil_phy_crop.set_kl(list(soil_saxton['KL_maize']))

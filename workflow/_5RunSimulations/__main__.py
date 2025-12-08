@@ -10,9 +10,9 @@ folder = "/workspace/workflow/_3AgroDataExtraction"
 geojson_file = glob.glob(os.path.join(folder, "*.geojson"))
 fields=gpd.read_file(geojson_file[0])
 
-nitrogen=[0,100,200,300]
+nitrogen=[0,50,100,150,200,250,300]
 
-for id,row in fields[fields['id_cell']>=437].iterrows():
+for id,row in fields[fields['id_cell']>=1068].iterrows():
     if row['id_within_cell']%2==0:
         shutil.copy(f"/workspace/workflow/_5RunSimulations/field_{row['id_cell']}_{row['id_within_cell']}/CornSoybean_{row['id_cell']}_{row['id_within_cell']}.apsimx",f"/workspace/CornSoybean.apsimx")
         

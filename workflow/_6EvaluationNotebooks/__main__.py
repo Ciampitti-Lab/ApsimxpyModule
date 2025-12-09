@@ -6,6 +6,8 @@ import matplotlib.dates as mdates
 from plotnine import *
 import geopandas as gpd
 import glob
+import numpy as np
+from scipy.interpolate import make_interp_spline
 
 ##############################
 # Simulations Visualizations #
@@ -274,3 +276,71 @@ boxplot_paper=(ggplot(plot_data ,aes(y='Yield',x='region',fill='region'))+
 
 boxplot_paper.save("/workspace/workflow/_6EvaluationNotebooks/PaperViz/boxplotPaper.jpeg")
 
+### Curves 
+
+# Selecting variables to do the merge
+sim_results=results_region_filtered[['Nitrogen','Yield','region']]
+
+real_results=GTD_filtered[['NKg_Ha','yield_ton','region']]
+real_results.rename(columns={'NKg_Ha':'Nitrogen','yield_ton':'Yield'},inplace=True)
+
+# Adding label real/simulations
+sim_results['Source']='Simulated'
+real_results['Source']='Ground Truth'
+
+# Merging
+real_sim_results=pd.concat([real_results,sim_results])
+
+# Getting average Yield
+real_sim_mean = (real_sim_results.groupby(['Nitrogen','region','Source'])['Yield'].mean().reset_index())
+real_sim_mean['Yield']=real_sim_mean['Yield'].round(1)
+
+# Getting percentage maximum yield
+real_sim_mean['yield_por'] = (
+    real_sim_mean['Yield'] /
+    real_sim_mean.groupby(['region','Source'])['Yield'].transform('max') * 100
+)
+
+# Creating the curves
+curves = []
+
+for (region, source), d in real_sim_mean.groupby(['region','Source']):
+    d = d.sort_values("Nitrogen")
+    x = d["Nitrogen"].values
+    y = d["yield_por"].values
+    xs = np.linspace(x.min(), x.max(), 100)
+    spline = make_interp_spline(x, y, k=2)
+    ys = spline(xs)
+    ys = np.clip(ys, 0, 100)
+    
+    curves.append(pd.DataFrame({
+        "Nitrogen": xs,
+        "yield_por": ys,
+        "region": region,
+        "Source": source
+    }))
+
+curves_df= pd.concat(curves, ignore_index=True)
+
+curvesPaper = (
+    ggplot()
+    + geom_line(curves_df, aes("Nitrogen", "yield_por", color="region"), size=3)
+    + theme_bw()
+    + labs(
+        x="N rate (Kg/Ha)",
+        y="Percent of maximum yield",
+        color="Region"
+    )
+    + facet_wrap("Source")
+)
+curvesPaper.save("/workspace/workflow/_6EvaluationNotebooks/PaperViz/curvesPaper.jpeg")
+
+### bars
+
+# Counts per EONR for Simulated data
+results_region_filtered['Yield']=results_region_filtered['Yield'].round(1)
+idx_max_yield=results_region_filtered.groupby('id_cell')['Yield'].idxmax()
+max_yield_df = results_region_filtered.loc[idx_max_yield, ['id_cell', 'Nitrogen']].set_index('id_cell')
+
+# Map Nitrogen at max yield back to original DataFrame
+results_region_filtered['nrate_max_yield'] = results_region_filtered['id_cell'].map(max_yield_df['Nitrogen'])

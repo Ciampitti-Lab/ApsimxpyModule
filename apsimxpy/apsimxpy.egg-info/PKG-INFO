@@ -1,9 +1,0 @@
-Metadata-Version: 2.4
-Name: apsimxpy
-Version: 0.1.0
-Summary: apsim in python using a docker image
-Author-email: jjolaher <jjolaher@purdue.edu>
-Requires-Dist: numpy
-Requires-Dist: pandas
-Requires-Dist: anytree
-Requires-Dist: datetime

@@ -21,7 +21,7 @@ APSIM NG simulations in Python. Workflow Included.
   - docker compose up -d
 ```
 ## 📂 Module Structure
-
+```text
 apsimxpy/
 ├── __init__.py
 ├── weather.py
@@ -50,7 +50,7 @@ apsimxpy/
             ├── sdaprop.py
             ├── soil_apsim.py
             └── soil_extraction.py
-
+```
 
 ## 🚀 Features
 - apsimxpy module (APSIM NG simulations in Python)

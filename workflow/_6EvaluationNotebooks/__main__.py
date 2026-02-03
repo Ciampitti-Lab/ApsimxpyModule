@@ -1,4 +1,5 @@
-from .analysis import results_config
+import analysis
+from analysis import results_config
 import matplotlib.pyplot as plt
 from ipywidgets import interact
 import matplotlib.dates as mdates
@@ -26,8 +27,8 @@ for col in pivot_df_maize.columns:
 years = pd.DatetimeIndex(pivot_df_maize.index).year.unique()
 plt.xticks(pd.to_datetime([f'{year}-01-01' for year in years]), years, rotation=45)
 
-plt.xlabel("Year")
-plt.ylabel('MaizeYield')
+plt.xlabel("year")
+plt.ylabel('maize_yield_kg_ha')
 plt.title("Maize yield over time")
 plt.legend(title="Simulation", bbox_to_anchor=(1.05, 1), loc="upper left")
 plt.tight_layout()
@@ -43,8 +44,8 @@ for col in pivot_df_soybean.columns:
 years = pd.DatetimeIndex(pivot_df_soybean.index).year.unique()
 plt.xticks(pd.to_datetime([f'{year}-01-01' for year in years]), years, rotation=45)
 
-plt.xlabel("Year")
-plt.ylabel('SoyBeanYield')
+plt.xlabel("year")
+plt.ylabel('soybean_yield_kg_ha')
 plt.title("Soy Bean yield over time")
 plt.legend(title="Simulation", bbox_to_anchor=(1.05, 1), loc="upper left")
 plt.tight_layout()
@@ -61,8 +62,8 @@ for col in pivot_df_yield.columns:
 years = pd.DatetimeIndex(pivot_df_yield.index).year.unique()
 plt.xticks(pd.to_datetime([f'{year}-01-01' for year in years]), years, rotation=45)
 
-plt.xlabel("Year")
-plt.ylabel('Yield')
+plt.xlabel("year")
+plt.ylabel('yield_ton_ha')
 plt.title("Yield over time")
 plt.legend(title="Simulation", bbox_to_anchor=(1.05, 1), loc="upper left")
 plt.tight_layout()
@@ -76,7 +77,7 @@ gtd=res.read_gtd()
 
 #### Yield per region
 YieldperRegion=(
-    ggplot(gtd, aes(x='Nitrogen', y='Yield', color='region')) +
+    ggplot(gtd, aes(x='nitro_kg_ha', y='yield_ton_ha', color='region')) +
     geom_point(size=1) +
     geom_smooth(method='lm',se=False) +
     theme_bw() +
@@ -90,12 +91,12 @@ YieldperRegion.save("/workspace/workflow/_6EvaluationNotebooks/GTViz/YieldperReg
 
 #### Boxplot Yield per region
 YieldBoxRegion = (
-    ggplot(gtd, aes(x='region', y='Yield', fill="region")) +
+    ggplot(gtd, aes(x='region', y='yield_ton_ha', fill="region")) +
     geom_violin(alpha=0.6) +
     geom_boxplot(width=0.35) +
     theme_bw() +
     labs(
-        x='County',
+        x='Region',
         y='Yield (t/ha)',
         fill='Source'
     )+
@@ -115,9 +116,9 @@ res.results_prepare()
 boxplot_data=res.boxplot_nrate_config()
 
 boxplotComparation = (
-    ggplot(boxplot_data, aes(x='region', y='Yield', fill='Source')) +
+    ggplot(boxplot_data, aes(x='region', y='yield_ton_ha', fill='source')) +
     geom_boxplot(position=position_dodge(width=0.8), width=0.3, alpha=0.6) +
-    facet_wrap('~Rate', ncol=2, scales='free_y') +
+    facet_wrap('~rate', ncol=2, scales='free_y') +
     theme_bw() +
     labs(
         title='Ground Truth vs Simulated Yield',
@@ -144,9 +145,9 @@ regionColors = {
 ### Boxplot
 
 boxplot_data.reset_index(drop=True,inplace=True)
-boxplot_paper=(ggplot(boxplot_data ,aes(y='Yield',x='region',fill='region'))+
+boxplot_paper=(ggplot(boxplot_data ,aes(y='yield_ton_ha',x='region',fill='region'))+
       geom_boxplot()+
-      facet_wrap('~Source')+
+      facet_wrap('~source')+
       theme_bw()+
       xlab('Region')+
       ylab('Yield (Ton/Ha)')+
@@ -162,7 +163,7 @@ curves_df=res.average_aonr(fit=False)
 
 curvesPaper = (
     ggplot()
-    + geom_line(curves_df, aes("Nitrogen", "yield_por", color="region"), size=3)
+    + geom_line(curves_df, aes("nitro_kg_ha", "yield_por", color="region"), size=3)
     + theme_bw()
     + labs(
         x="N rate (Kg/Ha)",
@@ -170,7 +171,7 @@ curvesPaper = (
         color="Region"
     )
     + scale_color_manual(values=regionColors)
-    + facet_wrap("Source")
+    + facet_wrap("source")
     
 )
 curvesPaper.save("/workspace/workflow/_6EvaluationNotebooks/PaperViz/curvesPaper.jpeg")
@@ -179,12 +180,12 @@ curvesPaper.save("/workspace/workflow/_6EvaluationNotebooks/PaperViz/curvesPaper
 total_counts=res.aonr_calculate()
 
 bars_plot = (
-    ggplot(total_counts, aes(x='Nitrogen',y='percentaje',fill='region'))
+    ggplot(total_counts, aes(x='nitro_kg_ha',y='percentaje',fill='region'))
     #+ geom_col(position='dodge', width=50,color='black')
     + geom_col(position='dodge', width=25,color='black')
     + theme_bw()
-    + facet_grid('Source~region')
-    + labs(x='Economical Optimum N Rate (Kg/ha)',y="% of sites",fill='Region')
+    + facet_grid('source~region')
+    + labs(x='Agronomical Optimum N Rate (Kg/ha)',y="% of sites",fill='Region')
     + scale_fill_manual(values=regionColors)
 )
 

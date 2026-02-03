@@ -28,14 +28,14 @@ apsimxpy/
 ├── clock.py
 ├── helptree.py
 ├── microclimate.py
-├── pyproject.toml
 ├── utils.py
+├── pyproject.toml
 └── field/
     ├── __init__.py
-    ├── surfaceorganicmatter.py 
-    ├── management/ 
-    │    ├── __init__.py 
-    │    └── fertilize.py
+    ├── surfaceorganicmatter.py
+    ├── management/
+    │   ├── __init__.py
+    │   └── fertilize.py
     └── soil/
         ├── __init__.py
         ├── chemical.py
@@ -50,6 +50,7 @@ apsimxpy/
             ├── sdaprop.py
             ├── soil_apsim.py
             └── soil_extraction.py
+
 
 ## 🚀 Features
 - apsimxpy module (APSIM NG simulations in Python)

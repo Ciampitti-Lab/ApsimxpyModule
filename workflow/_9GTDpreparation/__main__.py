@@ -120,6 +120,78 @@ new_gtd1.to_csv('/workspace/workflow/_6EvaluationNotebooks/GTD.csv',index=False)
 #                              NRCS_N_project_Indiana_dataset_2025.04.17_CSV.xlsx                                             #
 ###############################################################################################################################
 
+gtd2 = pd.read_excel('/workspace/workflow/_9GTDpreparation/NRCS_N_project_Indiana_dataset_2025.04.17_CSV.xlsx',sheet_name='Data',header=3, names=['state','county','year','field','field_name','id','grid_id','grid_org','transects_n','transect_id','transect_r','trans_a','trans_b','strategy','pnm','fp','damage','area_ac','plot_id','trt_n','tratment','ref_block','rep_refb','pt_npass','sd_npass','hybrid','tile','pre_crop','tillage','fnr_lbac','r_exn_lbac','r_stn_lbac','p_pren_lbac','r_pren_lbac','p_sidn_lbac','sidn_lbac','r_sdn_lbac','p_totn_lbac','rtn_lbac','rtotn_kgha','ryl15_buac','ry15_mtha'])
+# Filtering rows
+gtd2=gtd2[gtd2['pre_crop']=='Soybean']
+# Selecting Columns 
+gtd2=gtd2[['year','id','rtotn_kgha','ry15_mtha']]
 
+# Here I just rounded the decimals and then I grouped by nrate to avoid repeated nrates
+gtd2['rtotn_kgha'] = gtd2['rtotn_kgha'].div(10).astype('int')*10
+
+gtd2 = gtd2.sort_values('rtotn_kgha')
+gtd2 = gtd2.groupby(['rtotn_kgha','id'],as_index=False)['ry15_mtha'].mean()
+
+# Selecting the best curve that fit each field
+def fiting_curves(group):
+    quad_r2 = fit_quadratic_plateau(group, 'ry15_mtha', "rtotn_kgha")['r2']
+    lin_r2 = fit_linear_plateau(group, 'ry15_mtha', "rtotn_kgha")['r2']
+    
+    quad_rmse = fit_quadratic_plateau(group, 'ry15_mtha', "rtotn_kgha")['rmse']
+    lin_rmse = fit_linear_plateau(group, 'ry15_mtha', "rtotn_kgha")['rmse']
+    
+    quad_b0 = fit_quadratic_plateau(group, 'ry15_mtha', "rtotn_kgha")['b0']
+    lin_b0 = fit_linear_plateau(group, 'ry15_mtha', "rtotn_kgha")['b0']
+    
+    quad_b1 = fit_quadratic_plateau(group, 'ry15_mtha', "rtotn_kgha")['b1']
+    lin_b1 = fit_linear_plateau(group, 'ry15_mtha', "rtotn_kgha")['b1']
+    
+    quad_b2 = fit_quadratic_plateau(group, 'ry15_mtha', "rtotn_kgha")['b2']
+
+    
+    return pd.Series({'quad_r2': quad_r2, 'lin_r2': lin_r2,'quad_rmse':quad_rmse ,'lin_rmse':lin_rmse,'quad_b0':quad_b0,'quad_b1':quad_b1,'quad_b2':quad_b2,'lin_b0':lin_b0 ,'lin_b1':lin_b1})
+    
+fit_results = gtd2.groupby('id',as_index=False).apply(fiting_curves, include_groups=True)
+
+fit_results['best_model']=np.where(fit_results['quad_r2']>fit_results['lin_r2'],'quad_model','lin_model')
+
+
+a=np.where(fit_results['best_model']=='quad_model',fit_results['quad_b0'],fit_results['lin_b0'])
+b=np.where(fit_results['best_model']=='quad_model',fit_results['quad_b1'],fit_results['lin_b1'])
+c=np.where(fit_results['best_model']=='quad_model',fit_results['quad_b2'],np.nan)
+
+gtd2_curves=pd.DataFrame({
+    'id':fit_results['id'],
+    'a':a,
+    'b':b,
+    'c':c
+    }
+)
+
+# Nitrogen dosis
+nitro = np.random.uniform(0, 267.66, size=100)
+
+
+gtd2_curves = (
+    gtd2_curves
+    .assign(key=1)
+    .merge(
+        pd.DataFrame({'rate': nitro, 'key': 1}),
+        on='key'
+    )
+    .drop(columns='key')
+)
+
+a = gtd2_curves['a'].astype(float)
+b = gtd2_curves['b'].astype(float)
+c = gtd2_curves['c'].abs()
+r = gtd2_curves['rate'].astype(float)
+
+lin_val = a + (b * r)
+quad_val =  a + (b * r) - (c * r **2)
+
+gtd2_curves['yield_bush'] = np.where(gtd2_curves['c'].isna(),lin_val,quad_val)
+
+gtd2_curves['yield_ton'] = (gtd2_curves['yield_bush'] * 60 * 1.12085) / 1000
 
 

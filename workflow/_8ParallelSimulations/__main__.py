@@ -11,8 +11,9 @@ folder = "/workspace/workflow/_3AgroDataExtraction"
 geojson_file = glob.glob(os.path.join(folder, "*.geojson"))
 fields=gpd.read_file(geojson_file[0])
 
-# nitrogen=[0,25,50,75,100,125,150,175,200,225,250,275,300]
-nitrogen=[0,50,100,150,200,250,300]
+
+nitrogen = np.random.uniform(0, 267.66, size=6)/ 0.892
+
 # Preproccesing
 soils=pd.read_csv("/workspace/soil/soils.csv")
 cols = ['SAND', 'CLAY', 'SILT', 'BD']
@@ -34,8 +35,8 @@ elif region=='C':
 elif region=='NE':
     sample_fields=fields[fields['region']=='NE']
     
-for id,row in sample_fields[sample_fields['id_cell']>=230].iterrows():
-# for id,row in sample_fields.iterrows():
+# for id,row in sample_fields[sample_fields['id_cell']>=230].iterrows():
+for id,row in sample_fields.iterrows():
     print(row['id_cell'])
     if row['region']=='C':
         apsim_file='CornSoybean_C'
@@ -45,7 +46,7 @@ for id,row in sample_fields[sample_fields['id_cell']>=230].iterrows():
         apsim_file='CornSoybean_NE'
     
     if row['id_within_cell']%2==0:
-        for year in list(range(2006,2010,2)):
+        for year in list(range(2006,2023,2)):
             
             init_obg=apsimxpy.Initialize(apsim_folder_input='/Users/jorgeandresjolahernandez/Desktop/ApsimxpyModule',apsim_file_input= apsim_file)
 
@@ -76,7 +77,7 @@ for id,row in sample_fields[sample_fields['id_cell']>=230].iterrows():
                 # Counting simulations
                 count+=1
     else:
-        for year in list(range(2007,2010,2)):
+        for year in list(range(2006,2023,2)):
             init_obg=apsimxpy.Initialize(apsim_folder_input='/Users/jorgeandresjolahernandez/Desktop/ApsimxpyModule',apsim_file_input= apsim_file)
 
             clock1=apsimxpy.Clock(init_obj=init_obg)
@@ -167,9 +168,9 @@ def single_simulation(row):
 
 
 
-tasks = [row.to_dict() for _, row in sample_fields[sample_fields['id_cell']>=230].iterrows()] 
+# tasks = [row.to_dict() for _, row in sample_fields[sample_fields['id_cell']>=230].iterrows()] 
 
-# tasks = [row.to_dict() for _, row in sample_fields.iterrows()] 
+tasks = [row.to_dict() for _, row in sample_fields.iterrows()] 
 
 with ThreadPoolExecutor(max_workers=5) as executor:
     futures = [executor.submit(single_simulation, task) for task in tasks]

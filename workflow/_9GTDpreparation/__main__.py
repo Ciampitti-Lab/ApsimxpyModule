@@ -2,9 +2,7 @@ import pandas as pd
 import numpy as np
 import fit_curves
 from fit_curves import *
-#########################################################################################################################
-#                                   MasterDbase_NR_Dbase_forRstudio_0504.csv                                            #
-#########################################################################################################################
+
 
 
 # Map information to get regions from counties
@@ -31,8 +29,13 @@ region3_map = {
     "Bartholomew County": "C", "Clark County": "NC", "Decatur County": "C", "Dearborn County": "NC", "Floyd County": "NC", "Franklin County": "NC", "Harrison County": "NC", "Jackson County": "NC", "Jefferson County": "NC", "Jennings County": "NC", "Ohio County": "NC", "Ripley County": "NC", "Scott County": "NC", "Switzerland County": "NC"
 }
 
+#########################################################################################################################
+#                                   MasterDbase_NR_Dbase_forRstudio_0504.csv                                            #
+#########################################################################################################################
+
 # Nitrogen dosis
-nitro_gtd1 = np.random.uniform(0, 267.66, size=20)
+nitro_gtd1= np.random.uniform(89.2, 267.6, size=200)
+# nitro_gtd1 = np.array([ 89.2, 111.5, 178.4, 200.7, 223.0, 245.3, 267.6])
 nitro_gtd2 = nitro_gtd1 / 0.892
 
 gtd1=pd.read_csv("/workspace/workflow/_9GTDpreparation/MasterDbase_NR_Dbase_forRstudio_0504.csv",encoding="latin",names=['id','prev_crop','pu','year','state','crd','county','location','fld','lat','long','sandy','muck','soil_texture','soil_assoc','manure','irrig','hybrid','plt_date','ntiming','nsource','model','a','b','c','aonr','opt_yield','rsq','eonr'])
@@ -42,18 +45,21 @@ gtd1 = gtd1[gtd1['manure']=='no'] # No Manure
 gtd1 = gtd1[gtd1['irrig']=='no'] # No Irrigation
 gtd1 = gtd1[gtd1['prev_crop']=='Soy'] # Only Soybean as a Prep Crop
 
-
-values_to_replace=['-','']
+values_to_replace=['-','','NaN']
 gtd1=gtd1.replace(values_to_replace,np.nan)
-columns_to_check=['a','b','c']
+
+mask_noparam = gtd1['a'].isna()
+gtd1.loc[mask_noparam, 'a'] = gtd1['opt_yield']
+gtd1.loc[mask_noparam, 'b'] = 0
+gtd1.loc[mask_noparam]
+
+gtd1[['a','b','c','aonr']]=gtd1[['a','b','c','aonr']].astype(float)
+columns_to_check=['a']
 gtd1.dropna(subset=columns_to_check,inplace=True)
 gtd1.reset_index(drop=True, inplace=True)
 
 # Selecting Columns
 gtd1=gtd1[['id','year','crd','county','a','b','c','aonr']]
-
-
-
 
 # Setting all nitrogen dosis for each trial
 gtd1 = (
@@ -65,31 +71,25 @@ gtd1 = (
     )
     .drop(columns='key')
 )
-
 # from lb to kilograms
 gtd1['nkg_ha'] = (gtd1['rate'] / 0.892).astype(int)
+gtd1['aonr_kg_ha'] = (gtd1['aonr'] / 0.892).astype(int)
 
 a = gtd1['a'].astype(float)
 b = gtd1['b'].astype(float)
-c = gtd1['c'].astype(float).abs()
+c = gtd1['c'].abs()
 r = gtd1['rate'].astype(float)
-aonr = gtd1['aonr'].astype(float)
 
-curve_val = a + (b * r) - (c * r**2)
-plateau_val = a + (b * aonr) - (c * aonr**2)
+# Capped to max. N rate in trial
+gtd1['effective_r'] = gtd1[['rate', 'aonr']].min(axis=1)
+
+lin_val  = a + (b * gtd1['effective_r'])
+quad_val = a + (b * gtd1['effective_r']) - (c * gtd1['effective_r']**2)
 
 
-gtd1['yield_bush'] = np.where(r <= aonr, curve_val, plateau_val)
+gtd1['yield_bush'] = np.where(c.isna(), lin_val, quad_val)
 
 gtd1['yield_ton'] = (gtd1['yield_bush'] * 60 * 1.12085) / 1000
-
-# Enforcing non-decreasing yield per field
-gtd1['yield_ton'] = (
-    gtd1
-    .sort_values('rate')
-    .groupby('id')['yield_ton']
-    .cummax()
-)
 
 # Static column
 gtd1['dbase'] = 'GTD1'
@@ -114,7 +114,7 @@ new_gtd1=pd.DataFrame({
     'region':gtd1['region'],
     'year':gtd1['year'],
     'id':gtd1['id'],
-    'aonr':gtd1['aonr'],
+    'aonr_kg_ha':gtd1['aonr_kg_ha'],
     'dbase':gtd1['dbase']
     })
 
@@ -198,7 +198,7 @@ gtd2_curves['dbase'] = 'GTD2'
 
 new_gtd2=gtd2_curves[['id','rate','yield_ton','years','county','region','aonr','dbase']]
 
-new_gtd2.columns=['id','nitro_kg_ha','yield_ton_ha','year','county','region','aonr','dbase']
+new_gtd2.columns=['id','nitro_kg_ha','yield_ton_ha','year','county','region','aonr_kg_ha','dbase']
 
 
 gtd=pd.concat([new_gtd1,new_gtd2])

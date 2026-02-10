@@ -1,10 +1,6 @@
-# 
-APSIM NG simulations in Python-
+# apsimxpy (APSIMNG-Python)
 
-
-# apsimxpy-APSIMNG-Python
-
-APSIM NG simulations in Python. Workflow Included. 
+APSIM NG simulations in Python.
 
 ## 🚀 Features
 - apsimxpy module (APSIM NG simulations in Python)

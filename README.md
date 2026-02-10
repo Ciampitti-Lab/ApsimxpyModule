@@ -45,13 +45,15 @@ apsimxpy/
 ### Prerequisites
 - docker
 - apsiminitiative/apsimng (docker image)
-- apsimxpy module
 
 ### Steps
 
-- Import apsimxpy 
-- Clone Repository in the same folder than the apsimxpy module
-
+- Clone Repository
+- Run following commands in your terminal
+```
+docker build -t apsimxpy .
+docker compose up -d
+```
 
 
 

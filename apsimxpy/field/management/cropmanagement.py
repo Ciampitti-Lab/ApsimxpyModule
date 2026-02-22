@@ -35,7 +35,7 @@ class Management(ApsimModifier):
         self._reload()
         
         start_date = next(param for param in self.params if param["Key"] == "StartDate")
-        
+        start_date ['Value'] = str(new_value)  
         self.save_changes()  
         self.__start_date=new_value
 
@@ -43,7 +43,7 @@ class Management(ApsimModifier):
         self._reload()
         
         end_date = next(param for param in self.params if param["Key"] == "EndDate")
-        
+        end_date['Value'] = str(new_value)  
         self.save_changes()  
         self.__end_date=new_value
 

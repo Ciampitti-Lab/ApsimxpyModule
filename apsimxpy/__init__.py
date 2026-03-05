@@ -50,45 +50,6 @@ class simulator:
             print("STDERR:\n", e.stderr)
             if e.stderr=='':
                 print('File not found - load the correct name of the file')
-    def run_multi(self,setter=None,values=None):
-        if setter is not None and values is not None:
-            lis_df=[]
-            for sim,value in enumerate(values):
-                setter(value) ## Here I change the value of the attribute-
-                if sim==0:
-                    self.run()
-                    # Data recollected
-                    df=pd.read_csv(f'/workspace/{self.apsim_file_input}.Report.csv')
-                    df['n_sim']=sim
-                    lis_df.append(df)
-                    # Deleting last database created (.db)
-                    os.remove(f'/workspace/{self.apsim_file_input}.db')
-                    # Deleting last shared memory file (.db-shm)
-                    os.remove(f'/workspace/{self.apsim_file_input}.db-shm')
-                    # Deleting last Write-Ahead Log. (.db-wal)
-                    os.remove(f'/workspace/{self.apsim_file_input}.db-wal')
-                    # Deleting temporal csv. (.Report.csv)
-                    os.remove(f'/workspace/{self.apsim_file_input}.Report.csv')
-                    self.apsim_file_input=self.apsim_file_input + str(sim)
-                else:
-                    shutil.copy(f'/workspace/{self.apsim_file_input_original}.apsimx', f'/workspace/{self.apsim_file_input}.apsimx')
-                    self.command[8]=f"/folder/{self.apsim_file_input}.apsimx"
-                    self.run()
-                    df=pd.read_csv(f'/workspace/{self.apsim_file_input}.Report.csv')
-                    df['n_sim']=sim
-                    lis_df.append(df)
-                    self.apsim_file_input=self.apsim_file_input_original + str(sim)
-                    print(self.apsim_file_input)
-                    # Deleting last simulation file (.apsimx)
-                    os.remove(f'/workspace/{self.apsim_file_input_original + str(sim-1)}.apsimx')
-                    # Deleting last database created (.db)
-                    os.remove(f'/workspace/{self.apsim_file_input_original + str(sim-1)}.db')
-                    # Deleting last shared memory file (.db-shm)
-                    os.remove(f'/workspace/{self.apsim_file_input_original + str(sim-1)}.db-shm')
-                    # Deleting last Write-Ahead Log. (.db-wal)
-                    os.remove(f'/workspace/{self.apsim_file_input_original + str(sim-1)}.db-wal')
-                    # Deleting temporal csv. (.Report.csv)
-                    os.remove(f'/workspace/{self.apsim_file_input_original + str(sim-1)}.Report.csv')
                 
         final = pd.concat(lis_df, ignore_index=True)
         final.to_parquet("/workspace/merged_results.parquet", index=False)
